@@ -49,6 +49,7 @@ class SamAutomaticMaskGenerator:
         point_grids: Optional[List[np.ndarray]] = None,
         min_mask_region_area: int = 0,
         output_mode: str = "binary_mask",
+        generate_crops: bool = False,
     ) -> None:
         """
         Using a SAM model, generates masks for the entire image.
@@ -192,7 +193,23 @@ class SamAutomaticMaskGenerator:
             }
             curr_anns.append(ann)
 
-        return curr_anns
+        if not self.generate_crops:
+            # If not generating crops, return the original mask data
+            return curr_anns
+        
+        # Generating cropped masked images based on segmented masks
+        crops = []
+        for idx in range(len(mask_data["segmentations"])):
+            # Get the bounding box for the current mask
+            bbox = mask_data["boxes"][idx]
+            x0, y0, x1, y1 = map(int, bbox)  # Ensure coordinates are integers
+
+            # Crop the image using the bounding box
+            crop = image[y0:y1, x0:x1]
+            crops.append(crop)
+
+        return crops
+        
 
     def _generate_masks(self, image: np.ndarray) -> MaskData:
         orig_size = image.shape[:2]
